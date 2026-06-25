@@ -1,10 +1,35 @@
-import React from "react";
-import { useLocation } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useLocation, useSearchParams } from "react-router-dom";
+import { doc, getDoc } from "firebase/firestore";
+import { db } from "../../firebase";
 import html2canvas from "html2canvas";
 
 const OrderConfirmationPage = () => {
     const location = useLocation();
-    const { orderData, orderId } = location.state || {};
+    const [searchParams] = useSearchParams();
+    const stateData = location.state || {};
+
+    // Two entry paths:
+    //  1. COD flow passes order via router state.
+    //  2. Stripe redirects back with ?order_id=...&status=success — we fetch it.
+    const queryOrderId = searchParams.get("order_id");
+    const [orderId, setOrderId] = useState(stateData.orderId || queryOrderId || null);
+    const [orderData, setOrderData] = useState(stateData.orderData || null);
+
+    useEffect(() => {
+        if (orderData || !queryOrderId) return;
+        (async () => {
+            try {
+                const snap = await getDoc(doc(db, "orders", queryOrderId));
+                if (snap.exists()) {
+                    setOrderData(snap.data());
+                    setOrderId(snap.id);
+                }
+            } catch (error) {
+                console.error("Error loading order:", error);
+            }
+        })();
+    }, [queryOrderId, orderData]);
 
     const handleCaptureScreenshot = () => {
         const element = document.getElementById("orderConfirmationContent");

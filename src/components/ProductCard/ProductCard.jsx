@@ -1,26 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../../firebase";
-import { getAuth, GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { db, auth } from "../../firebase";
+import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
 import { collection, query, where, doc, setDoc, getDoc, getDocs, updateDoc, addDoc, serverTimestamp } from "firebase/firestore";
-import { useUser } from "../../context/UserContext";
+import { useAuth } from "../../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import { ShoppingCart, Zap, ChevronRight, X, LogIn, Check, Star, Heart } from "lucide-react";
 import LoadingSpinner from "../../utils/LoadingSpinner.jsx";
 
-const ProductCard = ({ product }) => {
-  const [inventory, setInventory] = useState({
-    inStock: false,
-    stock: 0,
-    lowStockThreshold: 0,
-    loading: true
-  });
+// `inventoryData` is supplied by the parent list (batched single read). When
+// absent (standalone usage), the card fetches its own inventory as a fallback.
+const ProductCard = ({ product, inventoryData }) => {
+  const [inventory, setInventory] = useState(
+    inventoryData
+      ? { ...inventoryData, loading: false }
+      : { inStock: false, stock: 0, lowStockThreshold: 0, loading: !inventoryData && inventoryData !== null }
+  );
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
   const [added, setAdded] = useState(false);
-  const [user, setUser] = useState(null);
-  const userContext = useUser();
-  const [profilePic, setProfilePic] = useState("/default-profile.png");
-  const [userState, setUserState] = useState(null);
-  const [userRole, setUserRole] = useState("user");
+  const { user: userContext, role: userRole } = useAuth();
   const [isHovered, setIsHovered] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isWishlisted, setIsWishlisted] = useState(false);
@@ -28,7 +25,6 @@ const ProductCard = ({ product }) => {
 
   const handleMouseEnter = () => setIsHovered(true);
   const handleMouseLeave = () => setIsHovered(false);
-  const auth = getAuth();
   const provider = new GoogleAuthProvider();
   const navigate = useNavigate();
 
@@ -40,59 +36,47 @@ const ProductCard = ({ product }) => {
     ((product.originalPrice - product.discountedPrice) / product.originalPrice) * 100
   );
 
+  // Role comes from auth context now (no per-card user-doc read).
+
+  // If the parent supplied inventory (batched read), just sync it. Otherwise
+  // fall back to fetching this product's inventory doc on its own.
   useEffect(() => {
-    const fetchUserRole = async () => {
-      if (userContext?.email) {
-        try {
-          const userRef = doc(db, "users", userContext.uid);
-          const userSnap = await getDoc(userRef);
-          if (userSnap.exists()) {
-            setUserRole(userSnap.data().role || "user");
-          }
-        } catch (error) {
-          console.error("Error fetching user role:", error);
-        }
-      }
-    };
-
-    fetchUserRole();
-  }, [userContext]);
-
-  useEffect(() => {
-    fetchInventory();
-  }, []);
-
-  const fetchInventory = async () => {
-    try {
-      setInventory(prev => ({ ...prev, loading: true }));
-      const inventoryRef = doc(db, "inventory", product.id);
-      const inventorySnap = await getDoc(inventoryRef);
-      if (inventorySnap.exists()) {
-        setInventory({
-          ...inventorySnap.data(),
-          loading: false
-        });
-      } else {
-        setInventory({
-          inStock: false,
-          stock: 0,
-          lowStockThreshold: 0,
-          loading: false
-        });
-      }
-    } catch (error) {
-      console.error("Error fetching inventory:", error);
+    if (inventoryData !== undefined) {
       setInventory({
         inStock: false,
         stock: 0,
         lowStockThreshold: 0,
-        loading: false
+        ...(inventoryData || {}),
+        loading: false,
       });
+      return;
     }
-  }
 
- 
-  
+    let cancelled = false;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, "inventory", product.id));
+        if (cancelled) return;
+        setInventory({
+          inStock: false,
+          stock: 0,
+          lowStockThreshold: 0,
+          ...(snap.exists() ? snap.data() : {}),
+          loading: false,
+        });
+      } catch (error) {
+        console.error("Error fetching inventory:", error);
+        if (!cancelled) {
+          setInventory({ inStock: false, stock: 0, lowStockThreshold: 0, loading: false });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [inventoryData, product.id]);
+
+
   const handleAddToCart = async (e) => {
     e.stopPropagation();
     if (!userContext) {
@@ -103,24 +87,20 @@ const ProductCard = ({ product }) => {
     setIsLoading(true);
     try {
       const cartItemsRef = collection(db, "userCart", userContext.uid, "cartItems");
-      console.log("Cart items reference:", cartItemsRef.path); // Debug log
   
       const querySnapshot = await getDocs(
         query(cartItemsRef, where("productId", "==", product.id))
       );
-      console.log("Query snapshot size:", querySnapshot.size); // Debug log
   
       if (!querySnapshot.empty) {
         const docSnapshot = querySnapshot.docs[0];
-        console.log("Existing cart item found:", docSnapshot.id); // Debug log
         const currentQuantity = docSnapshot.data().quantity || 1;
         await updateDoc(doc(cartItemsRef, docSnapshot.id), {
           quantity: currentQuantity + 1,
           addedAt: serverTimestamp()
         });
-        console.log("Quantity updated successfully"); // Debug log
       } else {
-        const newDocRef = await addDoc(cartItemsRef, {
+        await addDoc(cartItemsRef, {
           productId: product.id,
           title: product.title,
           price: product.discountedPrice,
@@ -128,26 +108,20 @@ const ProductCard = ({ product }) => {
           quantity: 1,
           addedAt: serverTimestamp()
         });
-        console.log("New cart item added with ID:", newDocRef.id); // Debug log
       }
-  
+
       setAdded(true);
       setTimeout(() => setAdded(false), 3000);
-      checkCart();
     } catch (error) {
-      console.error("Full error object:", error);
+      console.error("Error adding to cart:", error);
       if (error.code === 'permission-denied') {
         alert("You don't have permission to add to cart. Please check your account.");
       } else {
         alert("Failed to add item to cart. Please try again.");
       }
+    } finally {
+      setIsLoading(false);
     }
-  };
-
-
-  const checkCart = async () => {
-    const cartItems = await getDocs(collection(db, "userCart", userContext.uid, "cartItems"));
-    console.log("Current cart items:", cartItems.docs.map(doc => doc.data()));
   };
 
 
@@ -161,12 +135,9 @@ const ProductCard = ({ product }) => {
       const userDocRef = doc(db, "users", user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
-      if (userDocSnap.exists()) {
-        const userData = userDocSnap.data();
-        setUserRole(userData.role || "user");
-        setProfilePic(userData.profilePic || "/default-profile.png");
-        window.location.reload();
-      } else {
+      // Create the user profile on first sign-in. Role/profile then flow from
+      // the auth context after reload.
+      if (!userDocSnap.exists()) {
         await setDoc(userDocRef, {
           email: user.email,
           username: user.displayName,
@@ -175,12 +146,9 @@ const ProductCard = ({ product }) => {
           address: "",
           createdAt: serverTimestamp(),
         });
-        setProfilePic(user.photoURL || "/default-profile.png");
-        setUserRole("user");
-        window.location.reload();
       }
 
-      setUser(user);
+      window.location.reload();
     } catch (error) {
       console.error("Error logging in with Google:", error);
     }
@@ -415,4 +383,4 @@ const ProductCard = ({ product }) => {
   );
 };
 
-export default ProductCard;
+export default React.memo(ProductCard);

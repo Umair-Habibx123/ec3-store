@@ -59,7 +59,7 @@ userCart
 orders
 ||--- {orderId}
      ||--- userId: string
-     ||--- items: array
+     ||--- items: armray
           0 - {map}
             image
             price
@@ -73,7 +73,32 @@ orders
      ||--- paymentStatus: string ("paid", "unpaid", "failed")
      ||--- paymentMethod: string ("cash", "card")
      ||--- transactionId: string (optional)
+     ||--- updatedAt: string (ISO, set on payment status changes)
+     ||--- paidAt: string (ISO, set when Stripe payment succeeds)
+     ||--- stripeSessionId: string (Stripe Checkout Session id — card orders)
+     ||--- stripePaymentIntentId: string (Stripe PaymentIntent id — card orders)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# STRIPE BILLING (one-time order payments alongside Cash on Delivery)
+#
+# Flow:
+#   1. Checkout page POSTs productIds + quantities + address to
+#      /api/create-checkout-session with a Firebase ID token (Bearer).
+#   2. Server recomputes prices from `products` (never trusts the client),
+#      writes a pending/unpaid order, opens a Stripe Checkout Session in
+#      `payment` mode, and stamps stripeSessionId on the order.
+#   3. Stripe redirects the buyer to /order-confirmation?order_id=...
+#   4. Webhook (/api/stripe-webhook) verifies the signature and flips the
+#      order to paid/confirmed (or failed) via firebase-admin.
+#
+# COD orders skip Stripe and are written client-side as before.
+#
+# Server-only env vars (Vercel — never exposed to the browser):
+#   STRIPE_SECRET_KEY          sk_...   Stripe secret key
+#   STRIPE_WEBHOOK_SECRET      whsec_.. Webhook signing secret
+#   FIREBASE_SERVICE_ACCOUNT   {json}   Admin SDK service account (raw or base64)
+# ─────────────────────────────────────────────────────────────────────────────
 
 
 products/{productId}/reviews

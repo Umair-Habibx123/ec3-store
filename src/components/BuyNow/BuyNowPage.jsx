@@ -569,8 +569,8 @@ const BuyNowPage = () => {
 
                   {paymentMethod === 'card' && (
                     <div className="mt-4 pl-12 animate-fade-in">
-                      <p className="text-red-500 text-sm font-medium">
-                        Card payments are not currently available. Please choose cash on delivery.
+                      <p className="text-gray-500 text-sm">
+                        You'll be securely redirected to Stripe to complete your payment.
                       </p>
                     </div>
                   )}
@@ -604,9 +604,9 @@ const BuyNowPage = () => {
             {/* Checkout Button */}
             <button
               onClick={handleCheckout}
-              disabled={!address || paymentMethod === 'card'}
+              disabled={!address}
               className={`w-full py-4 rounded-xl font-semibold flex items-center justify-center transition-all duration-200
-    ${!address || paymentMethod === 'card'
+    ${!address
                   ? 'bg-gradient-to-r from-gray-400 to-gray-500 text-gray-200 cursor-not-allowed shadow-inner'
                   : 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:from-blue-700 hover:to-indigo-700 shadow-md hover:shadow-lg'}
   `}

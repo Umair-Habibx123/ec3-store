@@ -2,42 +2,33 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import ProductCard from "./ProductCard";
-import { db } from "../../firebase";
-import { collection, getDocs } from "firebase/firestore";
-import LoadingSpinner from "../../utils/LoadingSpinner";
+import { fetchActiveProducts, fetchInventoryMap } from "../../utils/products";
 
 const ProductsSection = () => {
   const [products, setProducts] = useState([]);
+  const [inventoryMap, setInventoryMap] = useState({});
 
   useEffect(() => {
-    const fetchProducts = async () => {
+    let cancelled = false;
+    (async () => {
       try {
-
-        const productsSnapshot = await getDocs(collection(db, "products"));
-        const productsList = productsSnapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .filter((product) => product.isDeleted !== true); // filter out deleted
-
-
-        // Sort products descending based on the document ID in descending order (e.g., product10, product9, ..., product1)
-        const sortedProducts = productsList.sort((a, b) => {
-          const idA = a.id.replace(/[^0-9]/g, '');
-          const idB = b.id.replace(/[^0-9]/g, '');
-          return parseInt(idB) - parseInt(idA);
-        });
-
-        setProducts(sortedProducts);
-      }
-
-      catch (error) {
+        // Products + inventory fetched in parallel as two collection reads
+        // (was an N+1: one inventory getDoc per card).
+        const [productsList, invMap] = await Promise.all([
+          fetchActiveProducts(),
+          fetchInventoryMap(),
+        ]);
+        if (!cancelled) {
+          setProducts(productsList);
+          setInventoryMap(invMap);
+        }
+      } catch (error) {
         console.error("Error fetching products: ", error);
       }
+    })();
+    return () => {
+      cancelled = true;
     };
-
-    fetchProducts();
   }, []);
 
   // Slice to only show the first 10 products
@@ -63,7 +54,7 @@ const ProductsSection = () => {
               className="group relative transition-transform transform hover:scale-105 duration-300"
             >
               {/* <div className="w-full h-64 sm:h-64 lg:h-auto aspect-w-1 aspect-h-1"> */}
-              <ProductCard product={product} />
+              <ProductCard product={product} inventoryData={inventoryMap[product.id] ?? null} />
               {/* </div> */}
             </div>
           ))}

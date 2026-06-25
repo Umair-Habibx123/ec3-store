@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { doc, getDoc, setDoc, collection, addDoc } from "firebase/firestore";
-import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { db } from "../../firebase";
+import { useAuth } from "../../context/UserContext";
+import { startStripeCheckout } from "../../utils/stripeCheckout";
 import {
     Loader2,
     MapPin,
@@ -20,6 +21,7 @@ const CheckoutPage = () => {
     const location = useLocation();
     const navigate = useNavigate();
     const { orderData, productImages } = location.state || {};
+    const { user, loading: authLoading } = useAuth();
     const [address, setAddress] = useState(null);
     const [isAddressLoading, setIsAddressLoading] = useState(true);
     const [isAddressFormVisible, setIsAddressFormVisible] = useState(false);
@@ -43,34 +45,31 @@ const CheckoutPage = () => {
     }, [orderData, navigate]);
 
     useEffect(() => {
-        const auth = getAuth();
-        const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user) {
-                (async () => {
-                    try {
-                        const docRef = doc(db, "users", user.uid);
-                        const docSnap = await getDoc(docRef);
+        if (authLoading) return;
+        if (!user) {
+            navigate("/");
+            return;
+        }
 
-                        if (docSnap.exists()) {
-                            const data = docSnap.data();
-                            setAddress(data.address || null);
-                        } else {
-                            setAddress(null);
-                        }
-                    } catch (error) {
-                        console.error("Error fetching address:", error);
-                        setAddress(null);
-                    } finally {
-                        setIsAddressLoading(false);
-                    }
-                })();
-            } else {
-                navigate("/");
+        let cancelled = false;
+        (async () => {
+            try {
+                const docSnap = await getDoc(doc(db, "users", user.uid));
+                if (!cancelled) {
+                    setAddress(docSnap.exists() ? docSnap.data().address || null : null);
+                }
+            } catch (error) {
+                console.error("Error fetching address:", error);
+                if (!cancelled) setAddress(null);
+            } finally {
+                if (!cancelled) setIsAddressLoading(false);
             }
-        });
+        })();
 
-        return () => unsubscribe();
-    }, [navigate]);
+        return () => {
+            cancelled = true;
+        };
+    }, [user, authLoading, navigate]);
 
     const handleChangeAddress = () => {
         setIsAddressFormVisible(true);
@@ -121,8 +120,6 @@ const CheckoutPage = () => {
         }
 
         try {
-            const auth = getAuth();
-            const user = auth.currentUser;
             if (!user) throw new Error("User not authenticated");
 
             const userRef = doc(db, "users", user.uid);
@@ -158,11 +155,20 @@ const CheckoutPage = () => {
         setIsLoading(true);
 
         try {
-            const auth = getAuth();
-            const user = auth.currentUser;
             if (!user) throw new Error("User not authenticated");
 
+            // ── Card payment → hand off to Stripe Checkout ──────────────
+            // The order is created server-side (with trusted pricing) and
+            // confirmed by the Stripe webhook, so we redirect and stop here.
+            if (orderData.paymentMethod === "card") {
+                await startStripeCheckout({
+                    items: orderData.items,
+                    shippingAddress: address,
+                });
+                return; // browser navigates away to Stripe
+            }
 
+            // ── Cash on Delivery → existing Firestore + email flow ──────
             const updatedOrderData = {
                 ...orderData,
                 shippingAddress: address,

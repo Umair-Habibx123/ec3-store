@@ -73,3 +73,5 @@ dist-ssr/
 # Optional: ignore public Firebase keys
 public/firebase-messaging-sw.js
 public/firebase-messaging-sw.js.map
+.vercel
+.env*

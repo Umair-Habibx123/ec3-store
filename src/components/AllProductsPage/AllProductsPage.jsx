@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { getDocs, collection } from "firebase/firestore";
 import ProductCard from "../ProductCard/ProductCard.jsx";
 import { db } from "../../firebase.js";
+import { fetchActiveProducts, fetchInventoryMap } from "../../utils/products.js";
 import { Search, X, ChevronLeft, ChevronRight, Loader2, Filter } from "lucide-react";
 
 const AllProductsPage = () => {
   const itemsPerPage = 12;
   const [currentPage, setCurrentPage] = useState(1);
   const [products, setProducts] = useState([]);
+  const [inventoryMap, setInventoryMap] = useState({});
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingCategories, setLoadingCategories] = useState(true);
@@ -32,31 +34,22 @@ const AllProductsPage = () => {
       setLoadingCategories(true);
 
       try {
-        // Fetch categories
-        const categoriesSnapshot = await getDocs(collection(db, "categories"));
+        // Categories, products and inventory fetched in parallel (3 reads
+        // total instead of an inventory getDoc per card).
+        const [categoriesSnapshot, productsList, invMap] = await Promise.all([
+          getDocs(collection(db, "categories")),
+          fetchActiveProducts(),
+          fetchInventoryMap(),
+        ]);
+
         const categoriesList = categoriesSnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
         }));
         setCategories(categoriesList.sort((a, b) => a.name.localeCompare(b.name)));
 
-        // Fetch products
-        const productsSnapshot = await getDocs(collection(db, "products"));
-        const productsList = productsSnapshot.docs
-          .map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }))
-          .filter((product) => product.isDeleted !== true); // filter out deleted
-
-
-        const sortedProducts = productsList.sort((a, b) => {
-          const idA = a.id.replace(/[^0-9]/g, "");
-          const idB = b.id.replace(/[^0-9]/g, "");
-          return parseInt(idB) - parseInt(idA);
-        });
-
-        setProducts(sortedProducts);
+        setProducts(productsList);
+        setInventoryMap(invMap);
       } catch (error) {
         console.error("Error fetching data: ", error);
       } finally {
@@ -109,7 +102,6 @@ const AllProductsPage = () => {
   };
 
   const getPaginationRange = () => {
-    const totalNumbers = 5;
     const totalButtons = 5;
 
     if (totalPages <= totalButtons) {
@@ -417,7 +409,7 @@ const AllProductsPage = () => {
                         key={product.id}
                         className="group transition-all duration-300 hover:-translate-y-1 px-2 sm:px-0"
                       >
-                        <ProductCard product={product} />
+                        <ProductCard product={product} inventoryData={inventoryMap[product.id] ?? null} />
                       </div>
                     ))}
                   </div>
