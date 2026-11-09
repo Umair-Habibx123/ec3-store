@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from "react";
 import {
-    collection, getDocs, doc, updateDoc, arrayUnion, getDoc,
-    arrayRemove, writeBatch, query, where, Timestamp
+    collection, getDocs, doc, writeBatch, Timestamp
 } from "firebase/firestore";
 import { db } from "../../firebase";
-import { useUser } from "../../context/UserContext";
 import { useNavigate } from "react-router-dom";
 import {
     ArrowLeft, Search, Filter, Calendar, User, Mail,
@@ -15,7 +13,6 @@ import {
 
 
 function ManageOrdersPage() {
-    const userContext = useUser();
     const [orders, setOrders] = useState([]);
     const [filteredOrders, setFilteredOrders] = useState([]);
     const [loading, setLoading] = useState(true);

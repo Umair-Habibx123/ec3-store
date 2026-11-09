@@ -23,6 +23,8 @@ const SettingsPage = () => {
     return () => unsubscribe();
   }, [auth, navigate]);
 
+  // Used by the Delete Account button, which is commented out below for now.
+  // eslint-disable-next-line no-unused-vars
   const handleDeleteAccount = async () => {
     if (!currentUser) {
       Swal.fire("Error", "No user is logged in!", "error");

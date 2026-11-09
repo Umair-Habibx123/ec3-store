@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { db } from "../../firebase";
 import { collection, getDocs, query, where } from "firebase/firestore";
-import { useUser } from "../../context/UserContext";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import {
     Package,
@@ -46,7 +45,6 @@ const paymentStatusColors = {
 };
 
 const MyOrdersPage = () => {
-    const currentUser = useUser();
     const navigate = useNavigate();
     const [orders, setOrders] = useState([]);
     const [loading, setLoading] = useState(true);

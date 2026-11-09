@@ -19,10 +19,10 @@ const ProductDetail = () => {
     const [userRole, setUserRole] = useState("user");
     const [added, setAdded] = useState(false);
     const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-    const [loadingAddToCart, setLoadingAddToCart] = useState(false);
+    const [loadingAddToCart] = useState(false);
     const navigate = useNavigate();
-    const [profilePic, setProfilePic] = useState("/default-profile.png");
-    const [user, setUser] = useState(null);
+    const [, setProfilePic] = useState("/default-profile.png");
+    const [, setUser] = useState(null);
     const [relatedProducts, setRelatedProducts] = useState([]);
     const [categoryDetails, setCategoryDetails] = useState(null);
     const [inventory, setInventory] = useState(null);

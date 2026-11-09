@@ -30,4 +30,11 @@ export default [
       ],
     },
   },
+  {
+    // Vercel serverless functions and the local dev plugin run on Node, not in the browser.
+    files: ['api/**/*.js', 'dev/**/*.{js,mjs}', 'vite.config.js'],
+    languageOptions: {
+      globals: globals.node,
+    },
+  },
 ]

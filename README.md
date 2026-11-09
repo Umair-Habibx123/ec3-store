@@ -1,82 +1,82 @@
-# EC3-Store - E-commerce Platform for Products
+# EC3 Store
 
-Welcome to **EC3-Store**, an e-commerce platform built with React for shopping premium Products. The website allows users to browse products, add them to their cart, manage their profile, and place orders. The admin dashboard allows for efficient management of the products, orders, and users.
+**A full-stack e-commerce store built with React and Firebase: browse and filter products, check out with Stripe or cash on delivery, and manage everything from an admin dashboard.**
+
+[![Live demo](https://img.shields.io/badge/demo-ec3store.vercel.app-7c3aed)](https://ec3store.vercel.app)
+[![CI](https://github.com/Umair-Habibx123/ec3-store/actions/workflows/ci.yml/badge.svg)](https://github.com/Umair-Habibx123/ec3-store/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
+**Status:** a portfolio project, actively maintained (last updated November 2026).
+
+**[Open the live store](https://ec3store.vercel.app)**
+
+![The store's home page with a promotional banner and Shop Now button](docs/screenshots/home.jpg)
 
 ## Features
 
-- **Browse Products**: Discover a wide range of premium Products available for purchase.
-- **Add to Cart**: Easily add products to your cart and manage the items.
-- **Admin Dashboard**: Admins can manage products, orders, and user data efficiently.
-- **Order Management**: Securely place and track your orders.
-- **Profile Management**: Update personal details, view order history, and manage account settings.
+**For shoppers**
+- **Browse and find:** filter by category and price range, and search by name or description.
+- **Cart and Buy Now:** buy several items through the cart, or a single item straight away.
+- **Checkout:** pay by card with [Stripe Checkout](https://stripe.com/payments/checkout), or choose cash on delivery.
+- **After ordering:** track orders under **My Orders**, and manage your profile and saved addresses. Cash-on-delivery orders also send a confirmation email.
 
-## Getting Started
+**For admins**
+- **Dashboard:** add and edit products with image uploads, manage users, and move orders through pending, confirmed, shipped, delivered or cancelled.
+- **Access control:** admin pages are protected by role, stored on the user's account.
 
-### Prerequisites
+**Secure checkout**
+- **Server-side pricing:** prices are recalculated from the database, so the browser never decides what a customer pays.
+- **Verified payments:** a Stripe webhook verifies each payment's signature before marking the order paid.
 
-Make sure you have the following installed on your machine:
+![The product catalog with category filters, price ranges, search and discounted product cards](docs/screenshots/catalog.jpg)
 
-- **Node.js** (v14 or later)
-- **npm** (v6 or later)
+## Quick start
 
-### Installation
+You need **Node.js 20+** and a Firebase project with Authentication and Firestore enabled. Stripe, Cloudinary and EmailJS are only needed for card payments, image uploads and emails.
 
-1. Clone this repository:
+```bash
+git clone https://github.com/Umair-Habibx123/ec3-store.git
+cd ec3-store
+npm install
+cp .env.example .env      # then fill in your keys; .env.example explains each one
+npm run dev
+```
 
-   ```bash
-   git clone https://github.com/Umair-Habibx123/EC3Store
-   cd EC3Store
-   ```
+Open **http://localhost:5173**. `npm run dev` also serves the payment API locally, so you don't need the Vercel CLI.
 
-2. Install dependencies:
+To test card payments locally, install the [Stripe CLI](https://stripe.com/docs/stripe-cli) and run `npm run dev:all`. It starts the app and forwards Stripe events to your local webhook.
 
-   ```bash
-   npm install
-   ```
+| Command | What it does |
+|---|---|
+| `npm run dev` | Starts the app and the `/api` functions at http://localhost:5173 |
+| `npm run dev:all` | Same, plus Stripe webhook forwarding |
+| `npm run build` | Builds the production site into `dist/` |
+| `npm run lint` | Checks the code with ESLint |
 
-3. Create a `.env` file and add the Firebase configuration:
+## How it's built
 
-   ```bash
-   REACT_APP_FIREBASE_API_KEY=your_api_key
-   REACT_APP_FIREBASE_AUTH_DOMAIN=your_auth_domain
-   REACT_APP_FIREBASE_PROJECT_ID=your_project_id
-   REACT_APP_FIREBASE_STORAGE_BUCKET=your_storage_bucket
-   REACT_APP_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
-   REACT_APP_FIREBASE_APP_ID=your_app_id
-   ```
+| Part | What it uses |
+|---|---|
+| Frontend | React 19, React Router 7, Tailwind CSS 4, built with Vite |
+| Data and accounts | Firebase Authentication and Firestore |
+| Payments | Stripe Checkout, through Vercel serverless functions in `api/` |
+| Images | Cloudinary uploads, with an unsigned upload preset |
+| Emails | EmailJS confirmations for cash-on-delivery orders |
+| Hosting | Vercel |
 
-4. Start the development server:
+```
+src/components/      pages: home, catalog, product, cart, checkout, orders, settings, admin dashboard
+src/context/         signed-in user, role and protected routes
+src/utils/           Stripe checkout, image upload, product helpers
+api/                 Vercel functions: create a checkout session, handle the Stripe webhook
+dev/apiPlugin.mjs    serves api/ locally during npm run dev
+```
 
-   ```bash
-   npm start
-   ```
+## Security notes
 
-   Your app will be live at [http://localhost:3000](http://localhost:3000).
-
-## Available Scripts
-
-- **npm start**: Runs the app in development mode.
-- **npm test**: Launches the test runner.
-- **npm run build**: Builds the app for production.
-- **npm run eject**: Ejects the app for custom configuration (not recommended for most users).
-
-## Contributing
-
-We welcome contributions! Please fork this repository and submit a pull request with your proposed changes.
+- **No secrets in the browser:** server keys (Stripe and Firebase Admin) are only read by the functions in `api/`. Every `VITE_` variable is public, so `.env.example` lists only public values under that prefix.
+- **Firestore rules aren't in this repo.** If you deploy your own copy, write rules that only let admins change products, users and other people's orders.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## Technologies Used
-
-- **React**: Frontend framework
-- **Firebase**: Real-time database and authentication
-- **React Router**: Routing
-- **Tailwind CSS**: Styling framework
-
-## Future Improvements
-
-- Implement payment gateway for secure transactions.
-- Add user reviews and ratings for products.
-- Enhance the mobile-responsive design.
+[MIT](LICENSE) © 2026 [Umair Habib](https://github.com/Umair-Habibx123). Product photos are demo data.

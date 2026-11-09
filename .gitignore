@@ -75,3 +75,6 @@ public/firebase-messaging-sw.js
 public/firebase-messaging-sw.js.map
 .vercel
 .env*
+
+# The template with no values is safe to share
+!.env.example

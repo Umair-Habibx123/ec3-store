@@ -7,7 +7,7 @@ import EditProductModal from "./EditProductModal";
 function ShowProducts() {
     const [products, setProducts] = useState([]);
     const [categories, setCategories] = useState([]);
-    const [inventory, setInventory] = useState([]);
+    const [, setInventory] = useState([]);
     const [loading, setLoading] = useState(true);
     const [editingProduct, setEditingProduct] = useState(null);
     const [formData, setFormData] = useState({});
@@ -67,6 +67,8 @@ function ShowProducts() {
         fetchData();
     }, []);
 
+    // Not called at the moment; kept for refreshing the list after an edit.
+    // eslint-disable-next-line no-unused-vars
     const fetchProducts = async () => {
         try {
             // Fetch products

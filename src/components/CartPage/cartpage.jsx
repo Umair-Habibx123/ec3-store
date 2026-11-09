@@ -12,11 +12,11 @@ const CartPage = () => {
     const provider = new GoogleAuthProvider();
     const [cart, setCart] = useState([]);
     const [validCartItems, setValidCartItems] = useState([]);
-    const [user, setUser] = useState(null);
-    const [profilePic, setProfilePic] = useState("/default-profile.png");
+    const [, setUser] = useState(null);
+    const [, setProfilePic] = useState("/default-profile.png");
     const [totalPrice, setTotalPrice] = useState(0);
     const [selectedItems, setSelectedItems] = useState([]);
-    const [userRole, setUserRole] = useState("user");
+    const [, setUserRole] = useState("user");
     const [selectAll, setSelectAll] = useState(false);
     const [loadingItem, setLoadingItem] = useState(null);
     const [isLoading, setIsLoading] = useState(true);

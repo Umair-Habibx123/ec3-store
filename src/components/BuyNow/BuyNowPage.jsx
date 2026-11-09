@@ -3,7 +3,6 @@ import { useEffect, useState } from 'react';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { useUser } from '../../context/UserContext';
 import LoadingSpinner from "../../utils/LoadingSpinner"
 import {
   ArrowLeft,
@@ -40,7 +39,6 @@ const BuyNowPage = () => {
   });
   const [paymentMethod, setPaymentMethod] = useState('cash');
 
-  const user = useUser();
 
   useEffect(() => {
     if (!product && !products) {

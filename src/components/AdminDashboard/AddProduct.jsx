@@ -37,7 +37,7 @@ function AddProduct() {
         inStock: true,
         totalStock: 0,
     });
-    const [currentImage, setCurrentImage] = useState("");
+    const [, setCurrentImage] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
